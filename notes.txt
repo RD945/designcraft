@@ -1,0 +1,11 @@
+1) make ui better
+2) add animation (maybe)
+3) login/sign up page (maybe)
+4) point system (maybe)
+5) follow up questions 
+6) fix templates 
+7) make project report (add optional or make it guidance instead of AI writing it for them)
+8) bolt.diy project maker? (for making UI of project which user give to ai)
+9) Deepseek api and google flash 2.0 api (better responses?)
+10) layout of website - add/move templates to bottom of the fields. remove black outlines from fields.  
+11) Make the writing of the ai UI better (font?)
