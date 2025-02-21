@@ -1,5 +1,3 @@
-Sure, I can help you create a README file for your project. Here is a basic template for your repository:
-
 ```markdown
 # DesignCraft
 
@@ -60,12 +58,3 @@ Contributions are welcome! Please follow these steps to contribute:
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-## Contact
-If you have any questions or suggestions, feel free to reach out:
-
-- GitHub: [RD945](https://github.com/RD945)
-- Email: your-email@example.com
-```
-
-You can modify the sections according to your project details. Let me know if you need any specific changes or additional information!
