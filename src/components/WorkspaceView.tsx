@@ -300,7 +300,7 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
 
 const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
     const tabs = {
-        'Design Studio': 'http://localhost:5174',
+        'esign Studio': 'http://localhost:5174',
         'Creative Lab': 'http://localhost:5173',
         'Workshop': 'http://127.0.0.1:7788/?__theme=light',
         'DesignCraft Browser': 'camera',
