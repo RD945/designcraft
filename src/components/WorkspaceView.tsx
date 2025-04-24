@@ -224,7 +224,13 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                         ".border:nth-child(4)",
                         ".rounded-full:nth-child(2)",
                         ".rounded-full:nth-child(1)",
-                        ".text-xs:nth-child(3)"
+                        ".text-xs:nth-child(3)",
+                        // New elements added
+                        ".mr-1:nth-child(2)",
+                        ".text-sm:nth-child(4)",
+                        ".text-sm:nth-child(3)",
+                        ".i-ph\\:x-circle",
+                        ".-mr-1"
                     ];
                     
                     // Create a script to inject
@@ -232,6 +238,14 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                         (function() {
                             function hideElements() {
                                 const selectors = ${JSON.stringify(selectorsToHide)};
+                                
+                                // Remove any existing style element to avoid duplicates
+                                const existingStyle = document.getElementById('element-remover-style');
+                                if (existingStyle) {
+                                    existingStyle.remove();
+                                }
+                                
+                                // Create new style element
                                 const style = document.createElement('style');
                                 style.id = 'element-remover-style';
                                 style.textContent = selectors.map(selector => 
@@ -300,7 +314,7 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
 
 const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
     const tabs = {
-        'esign Studio': 'http://localhost:5174',
+        'Design Studio': 'http://localhost:5174',
         'Creative Lab': 'http://localhost:5173',
         'Workshop': 'http://127.0.0.1:7788/?__theme=light',
         'DesignCraft Browser': 'camera',
