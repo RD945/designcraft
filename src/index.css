@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+  @apply bg-gradient-main-layout; /* Apply subtle background gradient */
+  @apply text-secondary-800; /* Default text color */
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Refine tab styles */
+.tab {
+    @apply px-4 py-2 text-sm font-medium text-secondary-500 hover:text-primary-600 border-b-2 border-transparent transition-all duration-200;
+    /* Removed fixed height, padding controls size */
+}
+
+.tab.active {
+    @apply text-primary-600 border-primary-500 bg-primary-50/50; /* Slightly transparent bg */
+}
+
+/* Refine iframe styles */
+iframe {
+    @apply w-full bg-transparent rounded-lg; /* Transparent bg, rely on parent */
+}
+
+/* Add custom scrollbar styles (optional, Webkit only) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: theme('colors.secondary.300');
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: theme('colors.secondary.400');
+}
