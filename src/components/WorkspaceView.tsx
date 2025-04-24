@@ -27,42 +27,30 @@ const DirectCameraFeed: React.FC = () => {
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const videoDevices = devices
                     .filter(device => device.kind === 'videoinput')
-                    // Exclude HP Wide Vision HD Camera
-                    .filter(device => !device.label.includes('HP Wide Vision HD Camera'))
                     .map((device, index) => ({
                         deviceId: device.deviceId,
                         label: device.label || `Camera ${index + 1}`
                     }));
                 
-                console.log('Available video devices:', videoDevices.map(d => d.label));
+                console.log('Available video devices:', videoDevices);
                 
                 if (videoDevices.length === 0) {
-                    setError('No compatible cameras found on your device.');
+                    setError('No cameras found on your device.');
                     return;
                 }
                 
                 setCameras(videoDevices);
                 
-                // Explicitly look for OBS Virtual Camera first
+                // Find OBS Virtual Camera first
                 const obsCamera = videoDevices.find(device => 
-                    device.label.includes('OBS Virtual Camera')
+                    device.label.includes('OBS') || 
+                    device.label.includes('Virtual Camera') ||
+                    device.label.includes('Virtual Cam')
                 );
                 
-                // If not found, look for any virtual camera
-                const anyVirtualCamera = !obsCamera ? videoDevices.find(device => 
-                    device.label.includes('Virtual Camera') || 
-                    device.label.includes('Virtual Cam') ||
-                    device.label.includes('OBS')
-                ) : null;
-                
-                // Set the initial camera prioritizing OBS Virtual Camera
-                const initialCamera = obsCamera || anyVirtualCamera || videoDevices[0];
+                // Set the initial camera (OBS or first available)
+                const initialCamera = obsCamera || videoDevices[0];
                 setSelectedCamera(initialCamera.deviceId);
-                
-                // If OBS Virtual Camera is not found, log a message
-                if (!obsCamera) {
-                    console.log('OBS Virtual Camera not found. Using alternative:', initialCamera.label);
-                }
             } catch (err) {
                 console.error('Error listing cameras:', err);
                 setError('Failed to list cameras. Please check browser permissions.');
@@ -93,7 +81,7 @@ const DirectCameraFeed: React.FC = () => {
                     videoRef.current.srcObject = stream;
                 }
                 
-                // Update camera info but we won't display it
+                // Update camera info
                 const camera = cameras.find(c => c.deviceId === selectedCamera);
                 if (camera) {
                     setCameraInfo(`Using: ${camera.label}`);
@@ -138,7 +126,7 @@ const DirectCameraFeed: React.FC = () => {
                 <>
                     <video 
                         ref={videoRef} 
-                        className="max-h-[80%] max-w-[80%] rounded-lg shadow-lg" 
+                        className="max-h-full max-w-full" 
                         autoPlay 
                         playsInline 
                     />
@@ -153,7 +141,7 @@ const DirectCameraFeed: React.FC = () => {
                                 <path d="M23 7l-7 5 7 5V7z"></path>
                                 <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
                             </svg>
-                            <span>AI Browser</span>
+                            <span>Select Camera</span>
                         </button>
                         
                         {showMenu && (
@@ -179,6 +167,13 @@ const DirectCameraFeed: React.FC = () => {
                             </div>
                         )}
                     </div>
+                    
+                    {/* Camera info label */}
+                    {cameraInfo && !showMenu && (
+                        <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded text-sm">
+                            {cameraInfo}
+                        </div>
+                    )}
                 </>
             )}
         </div>
@@ -186,44 +181,17 @@ const DirectCameraFeed: React.FC = () => {
 };
 
 const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
-    // Dynamic tab URLs that work in both development and production
-    const isDevelopment = window.location.hostname === 'localhost' || 
-                          window.location.hostname === '127.0.0.1';
-    
-    const getTabUrls = () => {
-        if (isDevelopment) {
-            return {
-                'Design Studio': 'http://localhost:5174',
-                'Creative Lab': 'http://localhost:5173',
-                'Workshop': 'http://127.0.0.1:7788/?__theme=light',
-                'DesignCraft Browser': 'camera',
-            };
-        } else {
-            // Production URLs - these would be your deployed service URLs
-            return {
-                'Design Studio': 'https://design-studio.designcraftstudio.com',
-                'Creative Lab': 'https://creative-lab.designcraftstudio.com',
-                'Workshop': 'https://workshop.designcraftstudio.com/?__theme=light',
-                'DesignCraft Browser': 'camera',
-            };
-        }
+    const tabs = {
+        'Design Studio': 'http://localhost:5173',
+        'Creative Lab': 'http://localhost:5174',
+        'Workshop': 'http://127.0.0.1:7788/?__theme=light',
+        'DesignCraft Browser': 'camera',
     };
-    
-    const tabs = getTabUrls();
-    
+
     const { sidebarOpen } = useContext(SidebarContext);
     const { currentUser } = useAuth();
     const navigate = useNavigate();
     const [windowHeight, setWindowHeight] = useState(window.innerHeight);
-    const [visibleIframes, setVisibleIframes] = useState<string[]>([activeTab]);
-    const [iframeRefs] = useState<Record<string, HTMLIFrameElement | null>>({});
-    
-    // Track previously visited tabs to maintain their state
-    useEffect(() => {
-        if (!visibleIframes.includes(activeTab)) {
-            setVisibleIframes(prev => [...prev, activeTab]);
-        }
-    }, [activeTab, visibleIframes]);
     
     // Update height on window resize
     useEffect(() => {
@@ -234,12 +202,6 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
-
-    // Store iframe state in localStorage when tab changes
-    useEffect(() => {
-        // Save the current active tab to localStorage
-        localStorage.setItem('lastActiveTab', activeTab);
-    }, [activeTab]);
 
     // Calculate the height of the iframe with minimum offsets
     const offsetHeight = 10 + 36 + 32 + 2;
@@ -290,12 +252,8 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
 
     return (
         <div className="w-full h-full">
-            {Object.entries(tabs).map(([tabName, url]) => {
-                // Only render if this tab has been viewed before (to preserve state)
-                const isVisible = visibleIframes.includes(tabName);
-                if (!isVisible) return null;
-                
-                return url === 'camera' ? (
+            {Object.entries(tabs).map(([tabName, url]) => (
+                url === 'camera' ? (
                     <div
                         key={tabName}
                         className={`w-full transition-all duration-300 ${
@@ -311,7 +269,6 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
                 ) : (
                     <iframe
                         key={tabName}
-                        ref={(el) => { iframeRefs[tabName] = el; }}
                         src={url}
                         title={tabName}
                         className={`w-full border-none transition-all duration-300 ${
@@ -319,16 +276,13 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
                         }`}
                         style={{ 
                             height: `${iframeHeight}px`,
-                            maxWidth: '100%',
-                            visibility: activeTab === tabName ? 'visible' : 'hidden',
-                            position: activeTab === tabName ? 'static' : 'absolute',
+                            maxWidth: '100%'
                         }}
                         allowFullScreen
                         loading="eager"
-                        allow="camera; microphone; display-capture; web-share; clipboard-read; clipboard-write"
                     />
                 )
-            })}
+            ))}
         </div>
     );
 };
