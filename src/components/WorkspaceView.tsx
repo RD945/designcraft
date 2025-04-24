@@ -185,6 +185,119 @@ const DirectCameraFeed: React.FC = () => {
     );
 };
 
+// IframeInjector component to inject custom JavaScript into iframes
+const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: number; isActive: boolean }> = ({
+    url,
+    title,
+    iframeHeight,
+    isActive
+}) => {
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+
+    // Function to inject the element hiding code
+    useEffect(() => {
+        const injectHidingScript = () => {
+            if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+            
+            try {
+                // Wait for iframe to load
+                iframeRef.current.addEventListener('load', () => {
+                    const iframe = iframeRef.current;
+                    if (!iframe || !iframe.contentWindow) return;
+                    
+                    // The selectors to hide from your Click to Remove Elements config
+                    const selectorsToHide = [
+                        ".focus\\:ring-bolt-elements-focus:nth-child(1)",
+                        ".lg\\:max-w-\\[70\\%\\]",
+                        ".i-ph\\:microphone",
+                        ".flex.transition-all:nth-child(1)",
+                        ".i-ph\\:download-simple",
+                        ".text-sm.i-bolt\\:chat",
+                        ".p-1\\.5:nth-child(1)",
+                        ".ml-2",
+                        ".bg-bolt-elements-item-backgroundDefault",
+                        ".py-2:nth-child(2)",
+                        ".text-bolt-elements-textPrimary:nth-child(3)",
+                        ".text-gray-500",
+                        ".w-70",
+                        ".border:nth-child(5)",
+                        ".border:nth-child(4)",
+                        ".rounded-full:nth-child(2)",
+                        ".rounded-full:nth-child(1)",
+                        ".text-xs:nth-child(3)"
+                    ];
+                    
+                    // Create a script to inject
+                    const script = `
+                        (function() {
+                            function hideElements() {
+                                const selectors = ${JSON.stringify(selectorsToHide)};
+                                const style = document.createElement('style');
+                                style.id = 'element-remover-style';
+                                style.textContent = selectors.map(selector => 
+                                    selector + " { display: none !important; }"
+                                ).join("\\n");
+                                document.head.appendChild(style);
+                                
+                                console.log('DesignCraft Studio: Hiding', selectors.length, 'elements');
+                            }
+
+                            // Run on load
+                            hideElements();
+
+                            // Also run on any DOM changes
+                            const observer = new MutationObserver(function(mutations) {
+                                hideElements();
+                            });
+                            
+                            observer.observe(document.body, {
+                                childList: true,
+                                subtree: true
+                            });
+                        })();
+                    `;
+                    
+                    // Inject the script into the iframe
+                    const contentWindow = iframe.contentWindow;
+                    try {
+                        // Try direct script injection
+                        const scriptElement = contentWindow.document.createElement('script');
+                        scriptElement.textContent = script;
+                        contentWindow.document.head.appendChild(scriptElement);
+                    } catch (e) {
+                        console.error('Failed to inject script directly:', e);
+                    }
+                });
+            } catch (e) {
+                console.error('Error injecting script:', e);
+            }
+        };
+        
+        injectHidingScript();
+    }, [url]);
+    
+    return (
+        <iframe
+            ref={iframeRef}
+            src={url}
+            title={title}
+            className="w-full h-full border-none"
+            style={{
+                display: 'block',
+                width: '100%',
+                height: '100%'
+            }}
+            allowFullScreen
+            loading="eager"
+            allow="camera; microphone; display-capture; clipboard-read; clipboard-write; web-share; storage-access; cross-origin-isolated; focus-without-user-activation *"
+            referrerPolicy="no-referrer-when-downgrade"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-storage-access-by-user-activation allow-top-navigation allow-modals allow-presentation allow-orientation-lock allow-pointer-lock"
+            data-coop="same-origin"
+            aria-haspopup="true"
+        />
+    );
+};
+
 const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
     const tabs = {
         'Design Studio': 'http://localhost:5174',
@@ -311,22 +424,11 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
                             maxWidth: '100%'
                         }}
                     >
-                        <iframe
-                            src={url}
-                            title={tabName}
-                            className="w-full h-full border-none"
-                            style={{
-                                display: 'block',
-                                width: '100%',
-                                height: '100%'
-                            }}
-                            allowFullScreen
-                            loading="eager"
-                            allow="camera; microphone; display-capture; clipboard-read; clipboard-write; web-share; storage-access; cross-origin-isolated; focus-without-user-activation *"
-                            referrerPolicy="no-referrer-when-downgrade"
-                            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-storage-access-by-user-activation allow-top-navigation allow-modals allow-presentation allow-orientation-lock allow-pointer-lock"
-                            data-coop="same-origin"
-                            aria-haspopup="true"
+                        <IframeInjector 
+                            url={url} 
+                            title={tabName} 
+                            iframeHeight={iframeHeight}
+                            isActive={activeTab === tabName}
                         />
                     </div>
                 )
