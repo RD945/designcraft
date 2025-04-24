@@ -309,7 +309,8 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
                             loading="eager"
                             allow="camera; microphone; display-capture; clipboard-read; clipboard-write; web-share; storage-access"
                             referrerPolicy="no-referrer-when-downgrade"
-                            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-storage-access-by-user-activation allow-top-navigation allow-modals"
+                            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-storage-access-by-user-activation allow-top-navigation allow-modals allow-presentation"
+                            data-coop="same-origin"
                         />
                     </div>
                 )
