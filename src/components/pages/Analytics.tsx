@@ -690,7 +690,7 @@ const Analytics: React.FC = () => {
           isPositive={true}
         />
         <StatCard 
-          title="Active Users" 
+          title="Collaboration" 
           value="3" 
           change="+100% from last period" 
           icon={Users} 
