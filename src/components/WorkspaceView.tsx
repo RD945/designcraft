@@ -193,15 +193,23 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
     isActive
 }) => {
     const iframeRef = useRef<HTMLIFrameElement>(null);
+    const [contentLoaded, setContentLoaded] = useState(false);
+    const [jsInjected, setJsInjected] = useState(false);
 
     // Function to inject the element hiding code
     useEffect(() => {
+        if (!isActive) return;
+        
         const injectHidingScript = () => {
-            if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+            if (!iframeRef.current) return;
+            
+            // Reset states when URL changes
+            setContentLoaded(false);
+            setJsInjected(false);
             
             try {
                 // Wait for iframe to load
-                iframeRef.current.addEventListener('load', () => {
+                const handleLoad = () => {
                     const iframe = iframeRef.current;
                     if (!iframe || !iframe.contentWindow) return;
                     
@@ -253,6 +261,12 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                     // Create a script to inject
                     let script = `
                         (function() {
+                            // Add initial style immediately to prevent flash
+                            const initialStyle = document.createElement('style');
+                            initialStyle.id = 'element-remover-style-initial';
+                            initialStyle.textContent = 'body { visibility: hidden; }';
+                            document.head.appendChild(initialStyle);
+                            
                             function hideElements() {
                                 const selectors = ${JSON.stringify(selectorsToHide)};
                                 
@@ -270,11 +284,26 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                                 ).join("\\n");
                                 document.head.appendChild(style);
                                 
+                                // Now make body visible again
+                                const initialStyle = document.getElementById('element-remover-style-initial');
+                                if (initialStyle) {
+                                    initialStyle.textContent = 'body { visibility: visible; }';
+                                    // Remove it after a slight delay to ensure everything is ready
+                                    setTimeout(() => initialStyle.remove(), 100);
+                                }
+                                
                                 console.log('DesignCraft Studio: Hiding', selectors.length, 'elements for', window.location.href);
+                                
+                                // Signal the parent frame that injection is complete
+                                try {
+                                    window.parent.postMessage({ type: 'jsInjected', url: window.location.href }, '*');
+                                } catch (e) {
+                                    console.error('Failed to notify parent frame:', e);
+                                }
                             }
 
-                            // Run on load
-                            hideElements();
+                            // Run on load with a slight delay to ensure DOM is ready
+                            setTimeout(hideElements, 0);
 
                             // Also run on any DOM changes to catch dynamically added elements
                             const observer = new MutationObserver(function(mutations) {
@@ -290,7 +319,7 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                         })();
                     `;
                     
-                    // Add auto-click functionality for the "Run Agent" button in Workshop tab (port 7788)
+                    // Add additional script for port 7788 if needed
                     if (url.includes('7788')) {
                         const autoClickScript = `
                         (function() {
@@ -374,37 +403,85 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                         const scriptElement = contentWindow.document.createElement('script');
                         scriptElement.textContent = script;
                         contentWindow.document.head.appendChild(scriptElement);
+                        
+                        // Mark JS as injected
+                        setJsInjected(true);
+                        
+                        // After a small delay, mark content as loaded even if we don't get a message
+                        setTimeout(() => setContentLoaded(true), 300);
                     } catch (e) {
                         console.error('Failed to inject script directly:', e);
+                        // If injection fails, still show the content after a delay
+                        setTimeout(() => {
+                            setJsInjected(true);
+                            setContentLoaded(true);
+                        }, 500);
                     }
-                });
+                };
+                
+                // Setup the load handler
+                iframeRef.current.addEventListener('load', handleLoad);
+                
+                // Clean up
+                return () => {
+                    if (iframeRef.current) {
+                        iframeRef.current.removeEventListener('load', handleLoad);
+                    }
+                };
             } catch (e) {
                 console.error('Error injecting script:', e);
+                // On error, still show the content
+                setJsInjected(true);
+                setContentLoaded(true);
             }
         };
         
         injectHidingScript();
-    }, [url]);
+        
+        // Listen for messages from the iframe
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data && event.data.type === 'jsInjected') {
+                setContentLoaded(true);
+            }
+        };
+        
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, [url, isActive]);
     
     return (
-        <iframe
-            ref={iframeRef}
-            src={url}
-            title={title}
-            className="w-full h-full border-none"
-            style={{
-                display: 'block',
-                width: '100%',
-                height: '100%'
-            }}
-            allowFullScreen
-            loading="eager"
-            allow="camera; microphone; display-capture; clipboard-read; clipboard-write; web-share; storage-access; cross-origin-isolated; focus-without-user-activation *"
-            referrerPolicy="no-referrer-when-downgrade"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-storage-access-by-user-activation allow-top-navigation allow-modals allow-presentation allow-orientation-lock allow-pointer-lock"
-            data-coop="same-origin"
-            aria-haspopup="true"
-        />
+        <div className="relative w-full h-full">
+            {/* Loading overlay */}
+            {isActive && !contentLoaded && (
+                <div className="absolute inset-0 bg-white z-10 flex items-center justify-center">
+                    <div className="flex flex-col items-center">
+                        <div className="w-8 h-8 border-t-2 border-primary-600 rounded-full animate-spin mb-3"></div>
+                        <div className="text-gray-600">Preparing content...</div>
+                    </div>
+                </div>
+            )}
+            
+            {/* The actual iframe with initial opacity 0 */}
+            <iframe
+                ref={iframeRef}
+                src={url}
+                title={title}
+                className="w-full h-full border-none transition-opacity duration-300"
+                style={{
+                    display: 'block',
+                    width: '100%',
+                    height: '100%',
+                    opacity: contentLoaded ? 1 : 0
+                }}
+                allowFullScreen
+                loading="eager"
+                allow="camera; microphone; display-capture; clipboard-read; clipboard-write; web-share; storage-access; cross-origin-isolated; focus-without-user-activation *"
+                referrerPolicy="no-referrer-when-downgrade"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-storage-access-by-user-activation allow-top-navigation allow-modals allow-presentation allow-orientation-lock allow-pointer-lock"
+                data-coop="same-origin"
+                aria-haspopup="true"
+            />
+        </div>
     );
 };
 
