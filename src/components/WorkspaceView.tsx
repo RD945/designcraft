@@ -218,6 +218,21 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    // Add a new effect to enable communication with iframe content
+    useEffect(() => {
+        // Function to handle messages from extensions or iframe content
+        const handleMessage = (event: MessageEvent) => {
+            // Allow messages from our localhost domains
+            if (event.origin.includes('localhost') || event.origin.includes('127.0.0.1')) {
+                console.log('Received message from iframe:', event.data);
+                // Relay any important messages that might help with extension functionality
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
+
     // Calculate the height of the iframe with minimum offsets
     const offsetHeight = 10 + 36 + 32 + 2;
     const iframeHeight = windowHeight - offsetHeight;
@@ -307,10 +322,11 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
                             }}
                             allowFullScreen
                             loading="eager"
-                            allow="camera; microphone; display-capture; clipboard-read; clipboard-write; web-share; storage-access"
+                            allow="camera; microphone; display-capture; clipboard-read; clipboard-write; web-share; storage-access; cross-origin-isolated; focus-without-user-activation *"
                             referrerPolicy="no-referrer-when-downgrade"
-                            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-storage-access-by-user-activation allow-top-navigation allow-modals allow-presentation"
+                            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-storage-access-by-user-activation allow-top-navigation allow-modals allow-presentation allow-orientation-lock allow-pointer-lock"
                             data-coop="same-origin"
+                            aria-haspopup="true"
                         />
                     </div>
                 )
