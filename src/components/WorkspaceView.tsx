@@ -205,32 +205,22 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                     const iframe = iframeRef.current;
                     if (!iframe || !iframe.contentWindow) return;
                     
-                    // The selectors to hide from your Click to Remove Elements config
+                    // Updated selectors from the CTRE export file
                     const selectorsToHide = [
                         ".focus\\:ring-bolt-elements-focus:nth-child(1)",
                         ".lg\\:max-w-\\[70\\%\\]",
-                        ".i-ph\\:microphone",
+                        ".transition-all:nth-child(3)",
+                        ".flex:nth-child(2) > .flex > .flex:nth-child(4)",
+                        ".bg-bolt-elements-item-backgroundDefault",
                         ".flex.transition-all:nth-child(1)",
-                        ".i-ph\\:download-simple",
+                        ".i-ph\\:pencil-fill:nth-child(1)",
+                        ".ml-2",
                         ".text-sm.i-bolt\\:chat",
                         ".p-1\\.5:nth-child(1)",
-                        ".ml-2",
-                        ".bg-bolt-elements-item-backgroundDefault",
-                        ".py-2:nth-child(2)",
-                        ".text-bolt-elements-textPrimary:nth-child(3)",
-                        ".text-gray-500",
-                        ".w-70",
-                        ".border:nth-child(5)",
-                        ".border:nth-child(4)",
-                        ".rounded-full:nth-child(2)",
-                        ".rounded-full:nth-child(1)",
-                        ".text-xs:nth-child(3)",
-                        // New elements added
+                        ".text-bolt-elements-item-contentAccent:nth-child(3)",
                         ".mr-1:nth-child(2)",
-                        ".text-sm:nth-child(4)",
                         ".text-sm:nth-child(3)",
-                        ".i-ph\\:x-circle",
-                        ".-mr-1"
+                        ".text-sm:nth-child(4)"
                     ];
                     
                     // Create a script to inject
