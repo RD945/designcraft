@@ -205,8 +205,8 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                     const iframe = iframeRef.current;
                     if (!iframe || !iframe.contentWindow) return;
                     
-                    // Updated complete list of selectors from the CTRE export file
-                    const selectorsToHide = [
+                    // General selectors to hide from the CTRE export file
+                    const generalSelectorsToHide = [
                         ".focus\\:ring-bolt-elements-focus:nth-child(1)",
                         ".lg\\:max-w-\\[70\\%\\]",
                         ".text-xs.text-green-500",
@@ -232,9 +232,26 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                         ".mb-2 > div",
                         ".lg\\:flex-row.gap-2"
                     ];
+
+                    // Specific selectors for port 7788
+                    const port7788Selectors = [
+                        "#component-4-button",
+                        "#component-27-button",
+                        "#component-55-button",
+                        "#component-87-button",
+                        "#component-90-button",
+                        ".wrap > .svelte-sar7eh:nth-child(2)"
+                    ];
+
+                    // Determine which selectors to use based on the URL
+                    let selectorsToHide = generalSelectorsToHide;
+                    
+                    if (url.includes('7788')) {
+                        selectorsToHide = port7788Selectors;
+                    }
                     
                     // Create a script to inject
-                    const script = `
+                    let script = `
                         (function() {
                             function hideElements() {
                                 const selectors = ${JSON.stringify(selectorsToHide)};
@@ -253,7 +270,7 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                                 ).join("\\n");
                                 document.head.appendChild(style);
                                 
-                                console.log('DesignCraft Studio: Hiding', selectors.length, 'elements');
+                                console.log('DesignCraft Studio: Hiding', selectors.length, 'elements for', window.location.href);
                             }
 
                             // Run on load
@@ -268,10 +285,87 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                                 childList: true,
                                 subtree: true,
                                 attributes: true,
-                                attributeFilter: ['class', 'style']
+                                attributeFilter: ['class', 'style', 'id']
                             });
                         })();
                     `;
+                    
+                    // Add auto-click functionality for the "Run Agent" button in Workshop tab (port 7788)
+                    if (url.includes('7788')) {
+                        const autoClickScript = `
+                        (function() {
+                            function clickRunAgentButton() {
+                                // Try different selectors that might match the "Run Agent" button
+                                const possibleSelectors = [
+                                    'button:contains("Run Agent")',
+                                    'button[title="Run Agent"]',
+                                    'button.run-agent-button',
+                                    'button[aria-label="Run Agent"]',
+                                    '.run-button',
+                                    'button.primary-button:contains("Run")',
+                                    // More generic attempts
+                                    'button:contains("Run")',
+                                    'button.primary',
+                                    'button.run'
+                                ];
+                                
+                                // Try to find the button using jQuery if available
+                                if (typeof $ !== 'undefined') {
+                                    for (const selector of possibleSelectors) {
+                                        const button = $(selector);
+                                        if (button.length > 0) {
+                                            console.log('Found "Run Agent" button with selector:', selector);
+                                            button.click();
+                                            return true;
+                                        }
+                                    }
+                                }
+                                
+                                // Vanilla JS approach - use querySelectorAll and check button text content
+                                const allButtons = document.querySelectorAll('button');
+                                for (const button of allButtons) {
+                                    if (button.textContent && 
+                                       (button.textContent.includes('Run Agent') || 
+                                        button.textContent.trim() === 'Run')) {
+                                        console.log('Found "Run Agent" button by text content');
+                                        button.click();
+                                        return true;
+                                    }
+                                }
+                                
+                                // If nothing found yet, try again later as the page might still be loading
+                                return false;
+                            }
+                            
+                            // First attempt - immediate
+                            if (!clickRunAgentButton()) {
+                                // Try again after a short delay (for dynamic content)
+                                setTimeout(() => {
+                                    if (!clickRunAgentButton()) {
+                                        // Try one more time with a longer delay
+                                        setTimeout(clickRunAgentButton, 1500);
+                                    }
+                                }, 500);
+                            }
+                            
+                            // Also attempt when DOM changes significantly
+                            const observer = new MutationObserver((mutations) => {
+                                for (const mutation of mutations) {
+                                    if (mutation.addedNodes.length > 2) {
+                                        clickRunAgentButton();
+                                    }
+                                }
+                            });
+                            
+                            observer.observe(document.body, {
+                                childList: true,
+                                subtree: true
+                            });
+                        })();
+                        `;
+                        
+                        script += autoClickScript;
+                    }
                     
                     // Inject the script into the iframe
                     const contentWindow = iframe.contentWindow;
@@ -319,7 +413,6 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
         'Design Studio': 'http://localhost:5174',
         'Creative Lab': 'http://localhost:5173',
         'Workshop': 'http://127.0.0.1:7788/?__theme=light',
-        'DesignCraft Browser': 'camera',
     };
 
     const { sidebarOpen } = useContext(SidebarContext);
@@ -416,20 +509,7 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
                 // Only create iframes for tabs that have been viewed
                 if (!loadedTabs.includes(tabName)) return null;
                 
-                return url === 'camera' ? (
-                    <div
-                        key={tabName}
-                        className={`w-full transition-all duration-300 ${
-                            activeTab === tabName ? 'block' : 'hidden'
-                        }`}
-                        style={{ 
-                            height: `${iframeHeight}px`,
-                            maxWidth: '100%'
-                        }}
-                    >
-                        <DirectCameraFeed />
-                    </div>
-                ) : (
+                return (
                     <div
                         key={tabName}
                         className={`w-full transition-all duration-300 ${
@@ -447,7 +527,7 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
                             isActive={activeTab === tabName}
                         />
                     </div>
-                )
+                );
             })}
         </div>
     );
