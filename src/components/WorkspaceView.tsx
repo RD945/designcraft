@@ -186,17 +186,44 @@ const DirectCameraFeed: React.FC = () => {
 };
 
 const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
-    const tabs = {
-        'Design Studio': 'http://localhost:5174',
-        'Creative Lab': 'http://localhost:5173',
-        'Workshop': 'http://127.0.0.1:7788/?__theme=light',
-        'DesignCraft Browser': 'camera',
+    // Dynamic tab URLs that work in both development and production
+    const isDevelopment = window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1';
+    
+    const getTabUrls = () => {
+        if (isDevelopment) {
+            return {
+                'Design Studio': 'http://localhost:5174',
+                'Creative Lab': 'http://localhost:5173',
+                'Workshop': 'http://127.0.0.1:7788/?__theme=light',
+                'DesignCraft Browser': 'camera',
+            };
+        } else {
+            // Production URLs - these would be your deployed service URLs
+            return {
+                'Design Studio': 'https://design-studio.designcraftstudio.com',
+                'Creative Lab': 'https://creative-lab.designcraftstudio.com',
+                'Workshop': 'https://workshop.designcraftstudio.com/?__theme=light',
+                'DesignCraft Browser': 'camera',
+            };
+        }
     };
-
+    
+    const tabs = getTabUrls();
+    
     const { sidebarOpen } = useContext(SidebarContext);
     const { currentUser } = useAuth();
     const navigate = useNavigate();
     const [windowHeight, setWindowHeight] = useState(window.innerHeight);
+    const [visibleIframes, setVisibleIframes] = useState<string[]>([activeTab]);
+    const [iframeRefs] = useState<Record<string, HTMLIFrameElement | null>>({});
+    
+    // Track previously visited tabs to maintain their state
+    useEffect(() => {
+        if (!visibleIframes.includes(activeTab)) {
+            setVisibleIframes(prev => [...prev, activeTab]);
+        }
+    }, [activeTab, visibleIframes]);
     
     // Update height on window resize
     useEffect(() => {
@@ -207,6 +234,12 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // Store iframe state in localStorage when tab changes
+    useEffect(() => {
+        // Save the current active tab to localStorage
+        localStorage.setItem('lastActiveTab', activeTab);
+    }, [activeTab]);
 
     // Calculate the height of the iframe with minimum offsets
     const offsetHeight = 10 + 36 + 32 + 2;
@@ -257,8 +290,12 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
 
     return (
         <div className="w-full h-full">
-            {Object.entries(tabs).map(([tabName, url]) => (
-                url === 'camera' ? (
+            {Object.entries(tabs).map(([tabName, url]) => {
+                // Only render if this tab has been viewed before (to preserve state)
+                const isVisible = visibleIframes.includes(tabName);
+                if (!isVisible) return null;
+                
+                return url === 'camera' ? (
                     <div
                         key={tabName}
                         className={`w-full transition-all duration-300 ${
@@ -274,6 +311,7 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
                 ) : (
                     <iframe
                         key={tabName}
+                        ref={(el) => { iframeRefs[tabName] = el; }}
                         src={url}
                         title={tabName}
                         className={`w-full border-none transition-all duration-300 ${
@@ -281,13 +319,16 @@ const WorkspaceView: React.FC<{ activeTab: string }> = ({ activeTab }) => {
                         }`}
                         style={{ 
                             height: `${iframeHeight}px`,
-                            maxWidth: '100%'
+                            maxWidth: '100%',
+                            visibility: activeTab === tabName ? 'visible' : 'hidden',
+                            position: activeTab === tabName ? 'static' : 'absolute',
                         }}
                         allowFullScreen
                         loading="eager"
+                        allow="camera; microphone; display-capture; web-share; clipboard-read; clipboard-write"
                     />
                 )
-            ))}
+            })}
         </div>
     );
 };
