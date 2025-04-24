@@ -205,22 +205,32 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                     const iframe = iframeRef.current;
                     if (!iframe || !iframe.contentWindow) return;
                     
-                    // Updated selectors from the CTRE export file
+                    // Updated complete list of selectors from the CTRE export file
                     const selectorsToHide = [
                         ".focus\\:ring-bolt-elements-focus:nth-child(1)",
                         ".lg\\:max-w-\\[70\\%\\]",
-                        ".transition-all:nth-child(3)",
-                        ".flex:nth-child(2) > .flex > .flex:nth-child(4)",
+                        ".text-xs.text-green-500",
+                        ".whitespace-nowrap",
+                        ".text-purple-500",
+                        ".i-ph\\:paperclip",
+                        ".i-ph\\:microphone",
+                        ".text-lg",
                         ".bg-bolt-elements-item-backgroundDefault",
-                        ".flex.transition-all:nth-child(1)",
-                        ".i-ph\\:pencil-fill:nth-child(1)",
-                        ".ml-2",
-                        ".text-sm.i-bolt\\:chat",
-                        ".p-1\\.5:nth-child(1)",
-                        ".text-bolt-elements-item-contentAccent:nth-child(3)",
+                        ".gap-5 > .gap-2",
+                        ".gap-5",
+                        ".text-xl.i-ph\\:download-simple",
+                        ".flex:nth-child(2) > .flex > .flex:nth-child(4)",
+                        ".mr-1:nth-child(1)",
                         ".mr-1:nth-child(2)",
                         ".text-sm:nth-child(3)",
-                        ".text-sm:nth-child(4)"
+                        ".text-sm:nth-child(4)",
+                        ".i-ph\\:pencil-fill",
+                        ".ml-2",
+                        ".text-bolt-elements-item-contentAccent:nth-child(3)",
+                        ".text-sm.i-bolt\\:chat",
+                        ".p-1\\.5:nth-child(1)",
+                        ".mb-2 > div",
+                        ".lg\\:flex-row.gap-2"
                     ];
                     
                     // Create a script to inject
@@ -249,14 +259,16 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                             // Run on load
                             hideElements();
 
-                            // Also run on any DOM changes
+                            // Also run on any DOM changes to catch dynamically added elements
                             const observer = new MutationObserver(function(mutations) {
                                 hideElements();
                             });
                             
                             observer.observe(document.body, {
                                 childList: true,
-                                subtree: true
+                                subtree: true,
+                                attributes: true,
+                                attributeFilter: ['class', 'style']
                             });
                         })();
                     `;
