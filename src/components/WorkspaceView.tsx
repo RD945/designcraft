@@ -236,11 +236,13 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                     // Specific selectors for port 7788
                     const port7788Selectors = [
                         "#component-4-button",
-                        "#component-27-button",
-                        "#component-55-button",
-                        "#component-87-button",
-                        "#component-90-button",
-                        ".wrap > .svelte-sar7eh:nth-child(2)"
+                        "#component-28-button",
+                        "#component-56-button",
+                        "#component-88-button",
+                        "#component-91-button",
+                        ".built-with",
+                        ".show-api",
+                        ".settings"
                     ];
 
                     // Determine which selectors to use based on the URL
@@ -310,14 +312,12 @@ const IframeInjector: React.FC<{ url: string; title: string; iframeHeight: numbe
                                 ];
                                 
                                 // Try to find the button using jQuery if available
-                                if (typeof $ !== 'undefined') {
-                                    for (const selector of possibleSelectors) {
-                                        const button = $(selector);
-                                        if (button.length > 0) {
-                                            console.log('Found "Run Agent" button with selector:', selector);
-                                            button.click();
-                                            return true;
-                                        }
+                                for (const selector of possibleSelectors) {
+                                    const button = $(selector);
+                                    if (button.length > 0) {
+                                        console.log('Found "Run Agent" button with selector:', selector);
+                                        button.click();
+                                        return true;
                                     }
                                 }
                                 
